@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
@@ -8,6 +8,13 @@ import VisibilityIcon from '@material-ui/icons/Visibility';
 import VisibilityOffIcon from '@material-ui/icons/VisibilityOff';
 import IconButton from '@material-ui/core/IconButton';
 import api from '../services/api';
+import _ from 'lodash';
+import {
+  validateEmail as validateEmailHelper,
+  validateUsername as validateUsernameHelper,
+  validatePassword as validatePasswordHelper,
+  validatePasswordConfirmation as validatePasswordConfirmationHelper,
+} from '../utils/userValidation';
 
 const useStyles = makeStyles({
   container: {
@@ -39,6 +46,13 @@ const useStyles = makeStyles({
   },
 });
 
+interface ErrorState {
+  username?: string;
+  email?: string;
+  password?: string;
+  password_confirmation?: string;
+}
+
 const Login: React.FC = () => {
   const classes = useStyles();
 
@@ -48,25 +62,156 @@ const Login: React.FC = () => {
     password: '',
     password_confirmation: '',
   });
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<ErrorState>({});
 
   const [isShowingPassword, setIsShowingPassword] = useState(false);
+
+  const validateUsernameDebounced = useMemo(
+    () =>
+      _.debounce((username: string) => {
+        if (username.length === 0) return;
+
+        const [isValid, message] = validateUsernameHelper(username);
+
+        if (!isValid) {
+          setErrors((errors) => ({
+            ...errors,
+            username: message,
+          }));
+          return;
+        }
+
+        api
+          .post('/validation/validateUsername', { username })
+          .then(() => {
+            setErrors((errors) => {
+              const { username, ...rest } = errors;
+              return rest;
+            });
+          })
+          .catch((err) => {
+            const { message } = err.response.data;
+            setErrors((errors) => ({
+              ...errors,
+              username: message,
+            }));
+          });
+      }, 500),
+    []
+  );
+
+  const validateEmailDebounced = useMemo(
+    () =>
+      _.debounce((email: string) => {
+        if (email.length === 0) {
+          return;
+        }
+
+        const [isValid, message] = validateEmailHelper(email);
+
+        if (!isValid) {
+          setErrors((errors) => ({
+            ...errors,
+            email: message,
+          }));
+          return;
+        }
+
+        const url = '/validation/validateEmail';
+        api
+          .post(url, { email })
+          .then(() => {
+            setErrors((errors) => {
+              const { email, ...rest } = errors;
+              return rest;
+            });
+          })
+          .catch((err) => {
+            const { message } = err.response.data;
+            setErrors((errors) => ({
+              ...errors,
+              email: message,
+            }));
+          });
+      }, 500),
+    []
+  );
+
+  const validatePasswordDebounced = useMemo(
+    () =>
+      _.debounce((password: string) => {
+        if (password.length === 0) return;
+        const [isValid, message] = validatePasswordHelper(password);
+        if (!isValid) {
+          setErrors((errors) => ({
+            ...errors,
+            password: message,
+          }));
+          return;
+        }
+
+        setErrors((errors) => {
+          const { password, ...rest } = errors;
+          return rest;
+        });
+      }, 500),
+    []
+  );
+
+  const validatePasswordConfirmationDebounced = useMemo(
+    () =>
+      _.debounce((passwordConfirmation: string) => {
+        console.log(passwordConfirmation.length, formInputData.password.length);
+        if (
+          passwordConfirmation.length === 0 ||
+          formInputData.password.length === 0
+        )
+          return;
+
+        const [isValid, message] = validatePasswordConfirmationHelper(
+          passwordConfirmation,
+          formInputData.password
+        );
+        if (!isValid) {
+          setErrors((errors) => ({
+            ...errors,
+            password_confirmation: message,
+          }));
+          return;
+        }
+
+        setErrors((errors) => {
+          const { password_confirmation, ...rest } = errors;
+          return rest;
+        });
+      }, 500),
+    [formInputData.password]
+  );
 
   const onFormInputChanged = (e: React.ChangeEvent) => {
     const target = e.target as HTMLInputElement;
 
-    if (target.name === 'username') {
-      api
-        .post('/validation/validateUsername', { username: target.value })
-        .then((response) => {
-          console.log(response.data);
-        })
-        .catch((err) => {
-          console.log(err);
-        });
-    }
-
     setFormInputData({ ...formInputData, [target.name]: target.value });
+    switch (target.name) {
+      case 'username':
+        validateUsernameDebounced(target.value);
+        break;
+      case 'email':
+        validateEmailDebounced(target.value);
+        break;
+      case 'password':
+        validatePasswordDebounced(target.value);
+        if (formInputData.password_confirmation.length > 0) {
+          validatePasswordConfirmationDebounced(
+            formInputData.password_confirmation
+          );
+        }
+        break;
+      case 'password_confirmation':
+        validatePasswordConfirmationDebounced(target.value);
+        break;
+      default:
+    }
   };
 
   const onEmailFormSubmitted = (e: React.FormEvent) => {
@@ -87,9 +232,11 @@ const Login: React.FC = () => {
               label="Username"
               placeholder="JohnDoe123"
               name="username"
-              helperText="Username already exists."
+              error={Boolean(errors.username)}
+              helperText={errors.username}
               variant="outlined"
               fullWidth
+              required
               style={{ marginBottom: '10px' }}
               onChange={onFormInputChanged}
             />
@@ -99,8 +246,10 @@ const Login: React.FC = () => {
               placeholder="username@example.com"
               name="email"
               variant="outlined"
-              helperText="Username already exists."
+              error={Boolean(errors.email)}
+              helperText={errors.email}
               fullWidth
+              required
               style={{ marginBottom: '10px' }}
               onChange={onFormInputChanged}
             />
@@ -109,8 +258,10 @@ const Login: React.FC = () => {
               label="Password"
               name="password"
               variant="outlined"
-              helperText="Username already exists."
+              error={Boolean(errors.password)}
+              helperText={errors.password}
               fullWidth
+              required
               style={{ marginBottom: '10px' }}
               InputProps={{
                 endAdornment: (
@@ -141,7 +292,9 @@ const Login: React.FC = () => {
               name="password_confirmation"
               variant="outlined"
               fullWidth
-              helperText="Username already exists."
+              required
+              error={Boolean(errors.password_confirmation)}
+              helperText={errors.password_confirmation}
               style={{ marginBottom: '10px' }}
               onChange={onFormInputChanged}
             />
