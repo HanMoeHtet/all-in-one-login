@@ -1,65 +1,130 @@
-export const validateUsername = (username: string): [boolean, string] => {
-  if (username.includes(' ')) {
-    return [false, 'Username must not contain whitespaces.'];
+const MIN_USERNAME_LENGTH = 6;
+const MAX_USERNAME_LENGTH = 16;
+
+export const validateUsername = (
+  username: string,
+  { required = false } = {}
+): [boolean, string[]] => {
+  let isValid = true;
+  const messages = [];
+
+  if (required && username.length === 0) {
+    isValid = false;
+    messages.push('Username is required.');
   }
 
-  if (username.length < 6 || username.length > 16) {
-    return [false, 'Username must be of length between 6 and 16.'];
+  if (username.includes(' ')) {
+    isValid = false;
+    messages.push('Username must not contain whitespaces.');
+  }
+
+  if (
+    username.length < MIN_USERNAME_LENGTH ||
+    username.length > MAX_USERNAME_LENGTH
+  ) {
+    isValid = false;
+    messages.push(
+      `Username must be of length between ${MIN_USERNAME_LENGTH} and ${MAX_USERNAME_LENGTH}.`
+    );
   }
 
   const regex = /[a-zA-Z_0-9]/;
   if (!regex.test(username)) {
-    return [
-      false,
-      'Username must be alphanumeric and contains only English characters.',
-    ];
+    isValid = false;
+    messages.push(
+      'Username must be alphanumeric and contains only English characters.'
+    );
   }
 
-  return [true, 'Username is valid.'];
+  return [isValid, messages];
 };
 
-export const validateEmail = (email: string): [boolean, string] => {
+export const validateEmail = (
+  email: string,
+  { required = false } = {}
+): [boolean, string[]] => {
+  let isValid = true;
+  const messages = [];
+
+  if (required && email.length === 0) {
+    isValid = false;
+    messages.push('Email is required.');
+  }
+
   const regex =
     /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
   if (!regex.test(email)) {
-    return [false, 'Email is not valid.'];
+    isValid = false;
+    messages.push('Email is not valid.');
   }
 
-  return [true, 'Email is valid.'];
+  return [isValid, messages];
 };
 
-export const validatePassword = (password: string): [boolean, string] => {
-  if (password.length < 8 || password.length > 20) {
-    return [false, 'Password must be of length between 8 and 20.'];
+const MIN_PASSWORD_LENGTH = 8;
+const MAX_PASSWORD_LENGTH = 20;
+export const validatePassword = (
+  password: string,
+  { required = false } = {}
+): [boolean, string[]] => {
+  let isValid = true;
+  const messages = [];
+
+  if (required && password.length === 0) {
+    isValid = true;
+    messages.push('Password is required.');
+  }
+
+  if (
+    password.length < MIN_PASSWORD_LENGTH ||
+    password.length > MAX_PASSWORD_LENGTH
+  ) {
+    isValid = false;
+    messages.push(
+      `Password must be of length between ${MIN_PASSWORD_LENGTH} and ${MAX_PASSWORD_LENGTH}.`
+    );
   }
 
   if (!/[a-z]{1}/.test(password)) {
-    return [false, 'Password must contain at least one lowercase character.'];
+    isValid = false;
+    messages.push('Password must contain at least one lowercase character.');
   }
 
   if (!/[A-Z]{1}/.test(password)) {
-    return [false, 'Password must contain at least one uppercase character.'];
+    isValid = false;
+    messages.push('Password must contain at least one uppercase character.');
   }
 
   if (!/[0-9]{1}/.test(password)) {
-    return [false, 'Password must contain at least one number.'];
+    isValid = false;
+    messages.push('Password must contain at least one number.');
   }
 
   const regex = /[.!@#$%^&*()+\-={}[\]\\,./<>?|]{1}/;
   if (!regex.test(password)) {
-    return [false, 'Password must contain at least one special character.'];
+    isValid = false;
+    messages.push('Password must contain at least one special character.');
   }
 
-  return [true, 'Password is valid'];
+  return [isValid, messages];
 };
 
 export const validatePasswordConfirmation = (
   passwordConfirmation: string,
-  password: string
-): [boolean, string] => {
-  if (passwordConfirmation !== password) {
-    return [false, 'Password confirmation does not match.'];
+  password: string,
+  { required = false } = {}
+): [boolean, string[]] => {
+  let isValid = true;
+  const messages = [];
+  if (required && passwordConfirmation.length === 0) {
+    isValid = false;
+    messages.push('Password confirmation is required.');
   }
 
-  return [true, 'Passwords match.'];
+  if (passwordConfirmation !== password) {
+    isValid = false;
+    messages.push('Password confirmation does not match.');
+  }
+
+  return [isValid, messages];
 };
