@@ -9,6 +9,10 @@ import { AppThunk } from '..';
 import api, { configureAuthHeader } from '../../services/api';
 import { removeToken, setToken } from '../../services/jwt';
 import { AxiosResponse } from 'axios';
+import {
+  setVerification,
+  setVerificationUserId,
+} from '../verification/verificationActions';
 
 export const onsLoadingStarted = (): AuthAction => {
   return {
@@ -34,8 +38,8 @@ export const signUpWithEmail =
       response = await api.post('/signUpWithEmail', formInputData);
       const { status, data } = response;
       if (status === 200) {
-        const { user, token } = data.data;
-        dispatch(onAuthSucceeded({ user, token }));
+        const { email } = data.data;
+        dispatch(setVerification({ email }));
       }
     } catch (err) {
       const { status, data } = err.response as AxiosResponse;
@@ -58,8 +62,9 @@ export const signUpWithPhoneNumber =
       response = await api.post('/signUpWithPhoneNumber', formInputData);
       const { status, data } = response;
       if (status === 200) {
-        const { user, token } = data.data;
-        dispatch(onAuthSucceeded({ user, token }));
+        const { phoneNumber, userId } = data.data;
+        dispatch(setVerificationUserId(userId));
+        dispatch(setVerification({ phoneNumber }));
       }
     } catch (err) {
       const { status, data } = err.response as AxiosResponse;
@@ -71,6 +76,23 @@ export const signUpWithPhoneNumber =
       dispatch(onLoadingEnded());
     }
   };
+
+export const verifyPhoneNumber =
+  (otp: string): AppThunk<Promise<void>> =>
+  (dispatch, getState) =>
+    new Promise(async (resolve, reject) => {
+      let response;
+      try {
+        const userId = getState().verificationStore.userId;
+        response = await api.post('/verifyPhoneNumber', { otp, userId });
+        const { user, token } = response.data.data;
+        dispatch(onAuthSucceeded({ user, token }));
+        resolve();
+      } catch (err) {
+        console.log(err);
+        reject();
+      }
+    });
 
 export const onAuthSucceeded =
   ({ user, token }: { user: User; token: string }): AppThunk =>

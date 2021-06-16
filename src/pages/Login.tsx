@@ -3,13 +3,14 @@ import { useDispatch, useSelector } from 'react-redux';
 import { makeStyles } from '@material-ui/core/styles';
 import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
-import { Button } from '@material-ui/core';
+import { Button, createStyles, Theme, withStyles } from '@material-ui/core';
 import InputAdornment from '@material-ui/core/InputAdornment';
 import VisibilityIcon from '@material-ui/icons/Visibility';
 import VisibilityOffIcon from '@material-ui/icons/VisibilityOff';
 import PhoneIcon from '@material-ui/icons/Phone';
 import EmailIcon from '@material-ui/icons/Email';
 import IconButton from '@material-ui/core/IconButton';
+import Autocomplete from '@material-ui/lab/Autocomplete';
 import api from '../services/api';
 import _ from 'lodash';
 import {
@@ -18,10 +19,15 @@ import {
   validatePassword as validatePasswordHelper,
   validatePasswordConfirmation as validatePasswordConfirmationHelper,
 } from '../utils/userValidation';
-import { setError, signUpWithEmail } from '../store/auth/authActions';
+import {
+  setError,
+  signUpWithEmail,
+  signUpWithPhoneNumber,
+} from '../store/auth/authActions';
 import { SignUpFormInputData } from '../store/auth/types';
 import { AppDispatch, RootState } from '../store';
 import { useHistory } from 'react-router-dom';
+import countryCodes from '../utils/countryCodes.json';
 
 const useStyles = makeStyles({
   container: {
@@ -70,8 +76,19 @@ const getEmptyFormInputData = (isUsingEmail: boolean): SignUpFormInputData => {
   return {
     ...formInputData,
     phoneNumber: '',
+    countryCode: '+95',
   };
 };
+
+function countryToFlag(isoCode: string) {
+  return typeof String.fromCodePoint !== 'undefined'
+    ? isoCode
+        .toUpperCase()
+        .replace(/./g, (char) =>
+          String.fromCodePoint(char.charCodeAt(0) + 127397)
+        )
+    : isoCode;
+}
 
 const Login: React.FC = () => {
   const classes = useStyles();
@@ -203,7 +220,7 @@ const Login: React.FC = () => {
     [formInputData.password, dispatch]
   );
 
-  const onFormInputChanged = (e: React.ChangeEvent) => {
+  const onFormInputChanged = (e: React.ChangeEvent<{ value: unknown }>) => {
     const target = e.target as HTMLInputElement;
 
     setFormInputData({ ...formInputData, [target.name]: target.value });
@@ -229,17 +246,29 @@ const Login: React.FC = () => {
     }
   };
 
+  const onCountryInputChanged = (
+    e: React.ChangeEvent<{}>,
+    value: {
+      name: string;
+      dial_code: string;
+      code: string;
+    } | null
+  ) => {
+    if (value === null) return;
+    setFormInputData({ ...formInputData, countryCode: value.dial_code });
+  };
+
   const isValidFormInput = () => {
     for (let error of Object.values(errors)) {
       if (error.length > 0) return false;
     }
     for (let input of Object.values(formInputData)) {
-      if (input.length === 0) return false;
+      if (typeof input === 'string' && input.length === 0) return false;
     }
     return true;
   };
 
-  const onEmailFormSubmitted = async (e: React.FormEvent) => {
+  const onFormSubmitted = async (e: React.FormEvent) => {
     e.preventDefault();
     const { username, password, passwordConfirmation } = formInputData;
 
@@ -267,7 +296,7 @@ const Login: React.FC = () => {
     ) {
       dispatch(
         setError({
-          email: ['Email is required.'],
+          phoneNumber: ['PhoneNumber is required.'],
         })
       );
       return;
@@ -292,9 +321,13 @@ const Login: React.FC = () => {
     }
 
     try {
-      await dispatch(signUpWithEmail(formInputData));
-      setFormInputData(getEmptyFormInputData('email' in formInputData));
-      history.push('/');
+      if ('email' in formInputData) {
+        await dispatch(signUpWithEmail(formInputData));
+        history.push('/verifyEmail');
+      } else {
+        await dispatch(signUpWithPhoneNumber(formInputData));
+        history.push('/verifyPhoneNumber');
+      }
     } catch (err) {
       console.log(err);
     }
@@ -308,7 +341,7 @@ const Login: React.FC = () => {
         justify="space-around"
       >
         <Grid item className={classes.email__form}>
-          <form name="emailForm" onSubmit={onEmailFormSubmitted}>
+          <form name="emailForm" onSubmit={onFormSubmitted}>
             <TextField
               label="Username"
               placeholder="JohnDoe123"
@@ -358,40 +391,67 @@ const Login: React.FC = () => {
                 onChange={onFormInputChanged}
               />
             ) : (
-              <TextField
-                type="tel"
-                label="Phone number"
-                placeholder=""
-                name="phoneNumber"
-                variant="outlined"
-                value={formInputData.phoneNumber}
-                error={errors.phoneNumber.length !== 0}
-                helperText={
-                  errors.phoneNumber.length > 0 && errors.phoneNumber[0]
-                }
-                disabled={isLoading}
-                fullWidth
-                required
-                style={{ marginBottom: '10px' }}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label="toggle email or phone"
-                        onClick={() => {
-                          setFormInputData(getEmptyFormInputData(true));
-                        }}
-                        onMouseDown={(e: React.MouseEvent) => {
-                          e.preventDefault();
-                        }}
-                      >
-                        <EmailIcon />
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-                onChange={onFormInputChanged}
-              />
+              <>
+                <TextField
+                  type="tel"
+                  label="Phone number"
+                  placeholder=""
+                  name="phoneNumber"
+                  variant="outlined"
+                  value={formInputData.phoneNumber}
+                  error={errors.phoneNumber.length !== 0}
+                  helperText={
+                    errors.phoneNumber.length > 0 && errors.phoneNumber[0]
+                  }
+                  fullWidth
+                  disabled={isLoading}
+                  required
+                  style={{ marginBottom: '10px' }}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle email or phone"
+                          onClick={() => {
+                            setFormInputData(getEmptyFormInputData(true));
+                          }}
+                          onMouseDown={(e: React.MouseEvent) => {
+                            e.preventDefault();
+                          }}
+                        >
+                          <EmailIcon />
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  onChange={onFormInputChanged}
+                />
+                <Autocomplete
+                  style={{ marginBottom: '10px' }}
+                  options={countryCodes}
+                  autoHighlight
+                  getOptionLabel={(option) => option.name}
+                  renderOption={(option) => (
+                    <React.Fragment>
+                      <span>{countryToFlag(option.code)}</span>
+                      <span style={{ marginLeft: 10 }}>
+                        {option.name} ({option.dial_code})
+                      </span>
+                    </React.Fragment>
+                  )}
+                  renderInput={(params) => (
+                    <TextField
+                      label="Country"
+                      {...params}
+                      variant="outlined"
+                      inputProps={{
+                        ...params.inputProps,
+                      }}
+                    />
+                  )}
+                  onChange={onCountryInputChanged}
+                />
+              </>
             )}
 
             <TextField

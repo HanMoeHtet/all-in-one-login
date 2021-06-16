@@ -4,6 +4,8 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import { RootState } from './store';
 import { Redirect } from 'react-router-dom';
+import EmailVerification from './pages/EmailVerification';
+import PhoneNumberVerification from './pages/PhoneNumberVerification';
 
 function App() {
   const isAuthenticated = useSelector(
@@ -18,6 +20,12 @@ function App() {
         </Route>
         <Route path="/login" exact>
           {isAuthenticated ? <Redirect to="/" /> : <Login />}
+        </Route>
+        <Route path="/verifyEmail" exact>
+          {isAuthenticated ? <Redirect to="/" /> : <EmailVerification />}
+        </Route>
+        <Route path="/verifyPhoneNumber" exact>
+          {isAuthenticated ? <Redirect to="/" /> : <PhoneNumberVerification />}
         </Route>
       </Switch>
     </BrowserRouter>

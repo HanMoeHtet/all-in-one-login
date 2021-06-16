@@ -6,6 +6,7 @@ export type SignUpFormInputData = {
   | { email: string }
   | {
       phoneNumber: string;
+      countryCode: string;
     }
 );
 
@@ -13,6 +14,8 @@ export type User = {
   userId: string;
   username: string;
   avatar: string;
+  email?: string;
+  phoneNumber?: string;
 };
 
 export type AuthErrors = {

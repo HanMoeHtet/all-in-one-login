@@ -7,9 +7,13 @@ import {
 } from 'redux';
 import reduxThunk, { ThunkAction, ThunkDispatch } from 'redux-thunk';
 import authReducer from './auth/authReducer';
+import { AuthAction } from './auth/types';
+import { VerificationAction } from './verification/types';
+import verificationReducer from './verification/verificationReducer';
 
 const rootReducer = combineReducers({
   authStore: authReducer,
+  verificationStore: verificationReducer,
 });
 
 const composeEnhancers =
@@ -25,7 +29,7 @@ export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = ThunkDispatch<
   ReturnType<typeof rootReducer>,
   unknown,
-  AnyAction
+  AuthAction | VerificationAction
 >;
 
 export type AppThunk<ReturnType = void> = ThunkAction<
