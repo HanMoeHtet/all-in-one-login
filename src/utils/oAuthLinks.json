@@ -1,0 +1,14 @@
+[
+  {
+    "provider": "FACEBOOK",
+    "uri": "/signInWithFacebook"
+  },
+  {
+    "provider": "GOOGLE",
+    "uri": "/signInWithGoogle"
+  },
+  {
+    "provider": "GITHUB",
+    "uri": "/signInWithGithub"
+  }
+]

@@ -114,6 +114,39 @@ export const verifyPhoneNumber =
       }
     });
 
+export const signInWithOAuth =
+  (oAuthProvider: string): AppThunk<Promise<string>> =>
+  (dispatch) => {
+    return new Promise(async (resolve, reject) => {
+      dispatch(onLoadingStarted());
+      try {
+        const response = await api.post('/signInWithOAuth', { oAuthProvider });
+        const { oAuthConsentUrl } = response.data.data;
+        resolve(oAuthConsentUrl);
+      } catch (err) {
+        console.log(err);
+        reject();
+      } finally {
+        dispatch(onLoadingEnded());
+      }
+    });
+  };
+
+export const redirectOauth =
+  (url: string): AppThunk<Promise<void>> =>
+  (dispatch) =>
+    new Promise(async (resolve, reject) => {
+      try {
+        const response = await api.get(url);
+        const { user, token } = response.data.data;
+        dispatch(onAuthSucceeded({ user, token }));
+        resolve();
+      } catch (err) {
+        console.log(err);
+        reject();
+      }
+    });
+
 export const logIn =
   (logInFormInputData: LogInFormInputData): AppThunk<Promise<void>> =>
   (dispatch) => {

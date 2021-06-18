@@ -27,8 +27,10 @@ import {
   validatePasswordConfirmation as validatePasswordConfirmationHelper,
 } from '../utils/userValidation';
 import {
+  checkAuth,
   logIn,
   setError,
+  signInWithOAuth,
   signUpWithEmail,
   signUpWithPhoneNumber,
 } from '../store/auth/authActions';
@@ -346,6 +348,22 @@ const Login: React.FC = () => {
     dispatch(logIn(logInFormInputData));
   };
 
+  const onOAuthSignInBtnClicked = async (oAuthProvider: string) => {
+    try {
+      const oAuthConsentUrl = await dispatch(signInWithOAuth(oAuthProvider));
+      const popUpWindow = window.open(oAuthConsentUrl, '_blank', 'location=0');
+      console.log(popUpWindow);
+      const interval = setInterval(() => {
+        if (popUpWindow && popUpWindow.closed) {
+          clearInterval(interval);
+          dispatch(checkAuth());
+        }
+      }, 1000);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
   return (
     <div className={classes.container}>
       <Grid
@@ -637,7 +655,24 @@ const Login: React.FC = () => {
           )}
         </Grid>
         <Grid item className={classes.oauth__form}>
-          Oauth form
+          <button
+            onClick={() => onOAuthSignInBtnClicked('GITHUB')}
+            type="button"
+          >
+            Github
+          </button>
+          <button
+            onClick={() => onOAuthSignInBtnClicked('FACEBOOK')}
+            type="button"
+          >
+            Facebook
+          </button>
+          <button
+            onClick={() => onOAuthSignInBtnClicked('GOOGLE')}
+            type="button"
+          >
+            Google
+          </button>
         </Grid>
       </Grid>
     </div>

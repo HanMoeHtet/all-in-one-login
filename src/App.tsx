@@ -6,6 +6,8 @@ import { RootState } from './store';
 import { Redirect } from 'react-router-dom';
 import EmailVerification from './pages/EmailVerification';
 import PhoneNumberVerification from './pages/PhoneNumberVerification';
+import OAuthRedirect from './pages/OAuthRedirect';
+import oAuthLinks from './utils/oAuthLinks.json';
 
 function App() {
   const isAuthenticated = useSelector(
@@ -32,6 +34,9 @@ function App() {
         </Route>
         <Route path="/verifyPhoneNumber" exact>
           {isAuthenticated ? <Redirect to="/" /> : <PhoneNumberVerification />}
+        </Route>
+        <Route path={oAuthLinks.map((item) => item.uri)} exact>
+          <OAuthRedirect />
         </Route>
       </Switch>
     </BrowserRouter>
