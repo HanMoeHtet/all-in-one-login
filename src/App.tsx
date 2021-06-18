@@ -12,6 +12,12 @@ function App() {
     (state: RootState) => state.authStore.isAuthenticated
   );
 
+  const isLoading = useSelector(
+    (state: RootState) => state.authStore.isLoading
+  );
+
+  if (isLoading) return null;
+
   return (
     <BrowserRouter>
       <Switch>

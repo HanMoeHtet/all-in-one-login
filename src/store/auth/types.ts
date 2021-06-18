@@ -2,13 +2,15 @@ export type SignUpFormInputData = {
   username: string;
   password: string;
   passwordConfirmation: string;
-} & (
-  | { email: string }
-  | {
-      phoneNumber: string;
-      countryCode: string;
-    }
-);
+  email?: string;
+  phoneNumber?: string;
+  countryCode?: string;
+};
+
+export type LogInFormInputData = {
+  username: string;
+  password: string;
+};
 
 export type User = {
   userId: string;

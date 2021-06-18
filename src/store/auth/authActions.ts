@@ -2,19 +2,20 @@ import {
   AuthAction,
   AuthActionType,
   AuthErrors,
+  LogInFormInputData,
   SignUpFormInputData,
   User,
 } from './types';
 import { AppThunk } from '..';
 import api, { configureAuthHeader } from '../../services/api';
-import { removeToken, setToken } from '../../services/jwt';
+import { getToken, removeToken, setToken } from '../../services/jwt';
 import { AxiosResponse } from 'axios';
 import {
   setVerification,
   setVerificationUserId,
 } from '../verification/verificationActions';
 
-export const onsLoadingStarted = (): AuthAction => {
+export const onLoadingStarted = (): AuthAction => {
   return {
     type: AuthActionType.SET_IS_LOADING,
     payload: true,
@@ -31,7 +32,7 @@ export const onLoadingEnded = (): AuthAction => {
 export const signUpWithEmail =
   (formInputData: SignUpFormInputData): AppThunk<Promise<void>> =>
   async (dispatch) => {
-    dispatch(onsLoadingStarted());
+    dispatch(onLoadingStarted());
 
     let response;
     try {
@@ -52,10 +53,29 @@ export const signUpWithEmail =
     }
   };
 
+export const verifyEmail =
+  (token: string): AppThunk<Promise<void>> =>
+  (dispatch, getState) => {
+    return new Promise(async (resolve, reject) => {
+      let response;
+      try {
+        const userId = getState().verificationStore.userId;
+        response = await api.post('/verifyEmail', { token, userId });
+        const { user, token: jwtToken } = response.data.data;
+        console.log('hello from auth succeeded');
+        dispatch(onAuthSucceeded({ user, token: jwtToken }));
+        resolve();
+      } catch (err) {
+        console.log(err);
+        reject();
+      }
+    });
+  };
+
 export const signUpWithPhoneNumber =
   (formInputData: SignUpFormInputData): AppThunk<Promise<void>> =>
   async (dispatch) => {
-    dispatch(onsLoadingStarted());
+    dispatch(onLoadingStarted());
 
     let response;
     try {
@@ -94,6 +114,26 @@ export const verifyPhoneNumber =
       }
     });
 
+export const logIn =
+  (logInFormInputData: LogInFormInputData): AppThunk<Promise<void>> =>
+  (dispatch) => {
+    return new Promise(async (resolve, reject) => {
+      dispatch(onLoadingStarted());
+      let response;
+      try {
+        response = await api.post('/logIn', logInFormInputData);
+        const { user, token } = response.data.data;
+        dispatch(onAuthSucceeded({ user, token }));
+        resolve();
+      } catch (err) {
+        console.log(err);
+        reject();
+      } finally {
+        dispatch(onLoadingEnded());
+      }
+    });
+  };
+
 export const onAuthSucceeded =
   ({ user, token }: { user: User; token: string }): AppThunk =>
   (dispatch) => {
@@ -106,7 +146,7 @@ export const onAuthSucceeded =
 export const setIsAuthenticated = (isAuthenticated: boolean): AuthAction => {
   return {
     type: AuthActionType.SET_IS_AUTHENTICATED,
-    payload: true,
+    payload: isAuthenticated,
   };
 };
 
@@ -131,7 +171,22 @@ export const setError =
     dispatch(setErrors({ ...errors, ...error }));
   };
 
-export const checkAuth = () => {};
+export const checkAuth = (): AppThunk => async (dispatch) => {
+  dispatch(onLoadingStarted());
+  const token = getToken();
+  if (token) {
+    let response;
+    try {
+      response = await api.post('/signInWithToken', { token });
+      const { user } = response.data.data;
+      dispatch(setUser(user));
+      dispatch(setIsAuthenticated(true));
+    } catch (err) {
+      console.log(err);
+    }
+  }
+  dispatch(onLoadingEnded());
+};
 
 export const logout = (): AppThunk => (dispatch) => {
   removeToken();

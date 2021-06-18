@@ -5,9 +5,12 @@ import './index.css';
 import { config } from 'dotenv';
 import { Provider } from 'react-redux';
 
-import store from './store';
+import store, { AppDispatch } from './store';
+import { checkAuth } from './store/auth/authActions';
 
 config();
+
+(store.dispatch as AppDispatch)(checkAuth());
 
 ReactDOM.render(
   <React.StrictMode>

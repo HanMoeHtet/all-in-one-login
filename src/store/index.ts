@@ -10,14 +10,16 @@ import authReducer from './auth/authReducer';
 import { AuthAction } from './auth/types';
 import { VerificationAction } from './verification/types';
 import verificationReducer from './verification/verificationReducer';
+import { composeWithDevTools } from 'redux-devtools-extension';
 
 const rootReducer = combineReducers({
   authStore: authReducer,
   verificationStore: verificationReducer,
 });
 
-const composeEnhancers =
-  (window as any).__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose;
+const composeEnhancers = composeWithDevTools({
+  trace: true,
+});
 
 const store = createStore(
   rootReducer,

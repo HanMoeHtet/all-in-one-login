@@ -3,7 +3,14 @@ import { useDispatch, useSelector } from 'react-redux';
 import { makeStyles } from '@material-ui/core/styles';
 import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
-import { Button, createStyles, Theme, withStyles } from '@material-ui/core';
+import {
+  Button,
+  createStyles,
+  Link,
+  Theme,
+  Typography,
+  withStyles,
+} from '@material-ui/core';
 import InputAdornment from '@material-ui/core/InputAdornment';
 import VisibilityIcon from '@material-ui/icons/Visibility';
 import VisibilityOffIcon from '@material-ui/icons/VisibilityOff';
@@ -20,11 +27,12 @@ import {
   validatePasswordConfirmation as validatePasswordConfirmationHelper,
 } from '../utils/userValidation';
 import {
+  logIn,
   setError,
   signUpWithEmail,
   signUpWithPhoneNumber,
 } from '../store/auth/authActions';
-import { SignUpFormInputData } from '../store/auth/types';
+import { LogInFormInputData, SignUpFormInputData } from '../store/auth/types';
 import { AppDispatch, RootState } from '../store';
 import { useHistory } from 'react-router-dom';
 import countryCodes from '../utils/countryCodes.json';
@@ -59,27 +67,6 @@ const useStyles = makeStyles({
   },
 });
 
-const getEmptyFormInputData = (isUsingEmail: boolean): SignUpFormInputData => {
-  const formInputData = {
-    username: '',
-    password: '',
-    passwordConfirmation: '',
-  };
-
-  if (isUsingEmail) {
-    return {
-      ...formInputData,
-      email: '',
-    };
-  }
-
-  return {
-    ...formInputData,
-    phoneNumber: '',
-    countryCode: '+95',
-  };
-};
-
 function countryToFlag(isoCode: string) {
   return typeof String.fromCodePoint !== 'undefined'
     ? isoCode
@@ -101,10 +88,24 @@ const Login: React.FC = () => {
   );
 
   const [isShowingPassword, setIsShowingPassword] = useState(false);
+  const [isUsingEmail, setIsUsingEmail] = useState(true);
+  const [isLoggingIn, setIsLoggingIn] = useState(true);
 
-  const [formInputData, setFormInputData] = useState<SignUpFormInputData>(
-    getEmptyFormInputData(true)
-  );
+  const [signUpFormInputData, setSignUpFormInputData] =
+    useState<SignUpFormInputData>({
+      username: '',
+      email: '',
+      phoneNumber: '',
+      countryCode: '',
+      password: '',
+      passwordConfirmation: '',
+    });
+
+  const [logInFormInputData, setLoginFormInputData] =
+    useState<LogInFormInputData>({
+      username: '',
+      password: '',
+    });
 
   const validateUsernameDebounced = useMemo(
     () =>
@@ -199,13 +200,13 @@ const Login: React.FC = () => {
       _.debounce((passwordConfirmation: string) => {
         if (
           passwordConfirmation.length === 0 ||
-          formInputData.password.length === 0
+          signUpFormInputData.password.length === 0
         )
           return;
 
         const [isValid, messages] = validatePasswordConfirmationHelper(
           passwordConfirmation,
-          formInputData.password
+          signUpFormInputData.password
         );
         if (!isValid) {
           dispatch(
@@ -217,13 +218,16 @@ const Login: React.FC = () => {
         }
         dispatch(setError({ passwordConfirmation: [] }));
       }, 500),
-    [formInputData.password, dispatch]
+    [signUpFormInputData.password, dispatch]
   );
 
   const onFormInputChanged = (e: React.ChangeEvent<{ value: unknown }>) => {
     const target = e.target as HTMLInputElement;
 
-    setFormInputData({ ...formInputData, [target.name]: target.value });
+    setSignUpFormInputData({
+      ...signUpFormInputData,
+      [target.name]: target.value,
+    });
     switch (target.name) {
       case 'username':
         validateUsernameDebounced(target.value);
@@ -233,9 +237,9 @@ const Login: React.FC = () => {
         break;
       case 'password':
         validatePasswordDebounced(target.value);
-        if (formInputData.passwordConfirmation.length > 0) {
+        if (signUpFormInputData.passwordConfirmation.length > 0) {
           validatePasswordConfirmationDebounced(
-            formInputData.passwordConfirmation
+            signUpFormInputData.passwordConfirmation
           );
         }
         break;
@@ -255,22 +259,25 @@ const Login: React.FC = () => {
     } | null
   ) => {
     if (value === null) return;
-    setFormInputData({ ...formInputData, countryCode: value.dial_code });
+    setSignUpFormInputData({
+      ...signUpFormInputData,
+      countryCode: value.dial_code,
+    });
   };
 
   const isValidFormInput = () => {
     for (let error of Object.values(errors)) {
       if (error.length > 0) return false;
     }
-    for (let input of Object.values(formInputData)) {
+    for (let input of Object.values(signUpFormInputData)) {
       if (typeof input === 'string' && input.length === 0) return false;
     }
     return true;
   };
 
-  const onFormSubmitted = async (e: React.FormEvent) => {
+  const onSignUpFormSubmitted = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { username, password, passwordConfirmation } = formInputData;
+    const { username, password, passwordConfirmation } = signUpFormInputData;
 
     if (username.length === 0) {
       dispatch(
@@ -281,25 +288,26 @@ const Login: React.FC = () => {
       return;
     }
 
-    if ('email' in formInputData && formInputData.email.length === 0) {
-      dispatch(
-        setError({
-          email: ['Email is required.'],
-        })
-      );
-      return;
-    }
-
-    if (
-      'phoneNumber' in formInputData &&
-      formInputData.phoneNumber.length === 0
-    ) {
-      dispatch(
-        setError({
-          phoneNumber: ['PhoneNumber is required.'],
-        })
-      );
-      return;
+    if (isUsingEmail) {
+      const { email } = signUpFormInputData;
+      if (email === undefined || email.length === 0) {
+        dispatch(
+          setError({
+            email: ['Email is required.'],
+          })
+        );
+        return;
+      }
+    } else {
+      const { phoneNumber } = signUpFormInputData;
+      if (phoneNumber === undefined || phoneNumber.length === 0) {
+        dispatch(
+          setError({
+            phoneNumber: ['PhoneNumber is required.'],
+          })
+        );
+        return;
+      }
     }
 
     if (password.length === 0) {
@@ -321,16 +329,21 @@ const Login: React.FC = () => {
     }
 
     try {
-      if ('email' in formInputData) {
-        await dispatch(signUpWithEmail(formInputData));
+      if (isUsingEmail) {
+        await dispatch(signUpWithEmail(signUpFormInputData));
         history.push('/verifyEmail');
       } else {
-        await dispatch(signUpWithPhoneNumber(formInputData));
+        await dispatch(signUpWithPhoneNumber(signUpFormInputData));
         history.push('/verifyPhoneNumber');
       }
     } catch (err) {
       console.log(err);
     }
+  };
+
+  const onLogInFormSubmitted = async (e: React.FormEvent) => {
+    e.preventDefault();
+    dispatch(logIn(logInFormInputData));
   };
 
   return (
@@ -341,32 +354,33 @@ const Login: React.FC = () => {
         justify="space-around"
       >
         <Grid item className={classes.email__form}>
-          <form name="emailForm" onSubmit={onFormSubmitted}>
-            <TextField
-              label="Username"
-              placeholder="JohnDoe123"
-              name="username"
-              value={formInputData.username}
-              error={errors.username.length !== 0}
-              helperText={errors.username.length > 0 && errors.username[0]}
-              disabled={isLoading}
-              variant="outlined"
-              fullWidth
-              required
-              style={{ marginBottom: '10px' }}
-              onChange={onFormInputChanged}
-            />
-
-            {'email' in formInputData ? (
+          {isLoggingIn ? (
+            <form name="LoginForm" onSubmit={onLogInFormSubmitted}>
               <TextField
-                type="email"
-                label="Email"
-                placeholder="username@example.com"
-                name="email"
+                label="Username"
+                placeholder="JohnDoe123"
+                name="username"
+                autoComplete="username"
+                value={logInFormInputData.username}
+                disabled={isLoading}
                 variant="outlined"
-                value={formInputData.email}
-                error={errors.email.length !== 0}
-                helperText={errors.email.length > 0 && errors.email[0]}
+                fullWidth
+                required
+                style={{ marginBottom: '10px' }}
+                onChange={(e) =>
+                  setLoginFormInputData({
+                    ...logInFormInputData,
+                    username: e.target.value,
+                  })
+                }
+              />
+              <TextField
+                type={isShowingPassword ? 'text' : 'password'}
+                label="Password"
+                name="password"
+                autoComplete="current-password password"
+                variant="outlined"
+                value={logInFormInputData.password}
                 disabled={isLoading}
                 fullWidth
                 required
@@ -375,36 +389,86 @@ const Login: React.FC = () => {
                   endAdornment: (
                     <InputAdornment position="end">
                       <IconButton
-                        aria-label="toggle email or phone"
+                        aria-label="toggle password visibility"
                         onClick={() => {
-                          setFormInputData(getEmptyFormInputData(false));
+                          setIsShowingPassword(!isShowingPassword);
                         }}
                         onMouseDown={(e: React.MouseEvent) => {
                           e.preventDefault();
                         }}
                       >
-                        <PhoneIcon />
+                        {isShowingPassword ? (
+                          <VisibilityIcon />
+                        ) : (
+                          <VisibilityOffIcon />
+                        )}
                       </IconButton>
                     </InputAdornment>
                   ),
                 }}
+                onChange={(e) =>
+                  setLoginFormInputData({
+                    ...logInFormInputData,
+                    password: e.target.value,
+                  })
+                }
+              />
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                fullWidth
+                size="large"
+                style={{ marginTop: '30px', marginBottom: 20 }}
+                disabled={!isValidFormInput() && isLoading}
+              >
+                Log in
+              </Button>
+              <Grid container justify="flex-end">
+                <Typography>
+                  <Link
+                    style={{ marginRight: 10 }}
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setIsLoggingIn(false);
+                    }}
+                  >
+                    Create an account
+                  </Link>
+                </Typography>
+              </Grid>
+            </form>
+          ) : (
+            <form name="signUpForm" onSubmit={onSignUpFormSubmitted}>
+              <TextField
+                label="Username"
+                placeholder="JohnDoe123"
+                name="username"
+                value={signUpFormInputData.username}
+                error={errors.username.length !== 0}
+                helperText={errors.username.length > 0 && errors.username[0]}
+                disabled={isLoading}
+                variant="outlined"
+                fullWidth
+                required
+                style={{ marginBottom: '10px' }}
                 onChange={onFormInputChanged}
               />
-            ) : (
-              <>
+
+              {isUsingEmail ? (
                 <TextField
-                  type="tel"
-                  label="Phone number"
-                  placeholder=""
-                  name="phoneNumber"
+                  type="email"
+                  label="Email"
+                  placeholder="username@example.com"
+                  autoComplete="email"
+                  name="email"
                   variant="outlined"
-                  value={formInputData.phoneNumber}
-                  error={errors.phoneNumber.length !== 0}
-                  helperText={
-                    errors.phoneNumber.length > 0 && errors.phoneNumber[0]
-                  }
-                  fullWidth
+                  value={signUpFormInputData.email}
+                  error={errors.email.length !== 0}
+                  helperText={errors.email.length > 0 && errors.email[0]}
                   disabled={isLoading}
+                  fullWidth
                   required
                   style={{ marginBottom: '10px' }}
                   InputProps={{
@@ -413,111 +477,164 @@ const Login: React.FC = () => {
                         <IconButton
                           aria-label="toggle email or phone"
                           onClick={() => {
-                            setFormInputData(getEmptyFormInputData(true));
+                            setIsUsingEmail(false);
                           }}
                           onMouseDown={(e: React.MouseEvent) => {
                             e.preventDefault();
                           }}
                         >
-                          <EmailIcon />
+                          <PhoneIcon />
                         </IconButton>
                       </InputAdornment>
                     ),
                   }}
                   onChange={onFormInputChanged}
                 />
-                <Autocomplete
-                  style={{ marginBottom: '10px' }}
-                  options={countryCodes}
-                  autoHighlight
-                  getOptionLabel={(option) => option.name}
-                  renderOption={(option) => (
-                    <React.Fragment>
-                      <span>{countryToFlag(option.code)}</span>
-                      <span style={{ marginLeft: 10 }}>
-                        {option.name} ({option.dial_code})
-                      </span>
-                    </React.Fragment>
-                  )}
-                  renderInput={(params) => (
-                    <TextField
-                      label="Country"
-                      {...params}
-                      variant="outlined"
-                      inputProps={{
-                        ...params.inputProps,
-                      }}
-                    />
-                  )}
-                  onChange={onCountryInputChanged}
-                />
-              </>
-            )}
+              ) : (
+                <>
+                  <TextField
+                    type="tel"
+                    label="Phone number"
+                    placeholder=""
+                    name="phoneNumber"
+                    variant="outlined"
+                    value={signUpFormInputData.phoneNumber}
+                    error={errors.phoneNumber.length !== 0}
+                    helperText={
+                      errors.phoneNumber.length > 0 && errors.phoneNumber[0]
+                    }
+                    fullWidth
+                    disabled={isLoading}
+                    required
+                    style={{ marginBottom: '10px' }}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            aria-label="toggle email or phone"
+                            onClick={() => {
+                              setIsUsingEmail(true);
+                            }}
+                            onMouseDown={(e: React.MouseEvent) => {
+                              e.preventDefault();
+                            }}
+                          >
+                            <EmailIcon />
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                    onChange={onFormInputChanged}
+                  />
+                  <Autocomplete
+                    style={{ marginBottom: '10px' }}
+                    options={countryCodes}
+                    autoHighlight
+                    getOptionLabel={(option) => option.name}
+                    renderOption={(option) => (
+                      <React.Fragment>
+                        <span>{countryToFlag(option.code)}</span>
+                        <span style={{ marginLeft: 10 }}>
+                          {option.name} ({option.dial_code})
+                        </span>
+                      </React.Fragment>
+                    )}
+                    renderInput={(params) => (
+                      <TextField
+                        label="Country"
+                        {...params}
+                        variant="outlined"
+                        inputProps={{
+                          ...params.inputProps,
+                        }}
+                      />
+                    )}
+                    onChange={onCountryInputChanged}
+                  />
+                </>
+              )}
 
-            <TextField
-              type={isShowingPassword ? 'text' : 'password'}
-              label="Password"
-              name="password"
-              variant="outlined"
-              value={formInputData.password}
-              error={errors.password.length !== 0}
-              helperText={errors.password.length > 0 && errors.password[0]}
-              disabled={isLoading}
-              fullWidth
-              required
-              style={{ marginBottom: '10px' }}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label="toggle password visibility"
-                      onClick={() => {
-                        setIsShowingPassword(!isShowingPassword);
-                      }}
-                      onMouseDown={(e: React.MouseEvent) => {
-                        e.preventDefault();
-                      }}
-                    >
-                      {isShowingPassword ? (
-                        <VisibilityIcon />
-                      ) : (
-                        <VisibilityOffIcon />
-                      )}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-              onChange={onFormInputChanged}
-            />
-            <TextField
-              type={isShowingPassword ? 'text' : 'password'}
-              label="Confirm Password"
-              name="passwordConfirmation"
-              variant="outlined"
-              fullWidth
-              required
-              value={formInputData.passwordConfirmation}
-              error={errors.passwordConfirmation.length !== 0}
-              helperText={
-                errors.passwordConfirmation.length > 0 &&
-                errors.passwordConfirmation[0]
-              }
-              disabled={isLoading}
-              style={{ marginBottom: '10px' }}
-              onChange={onFormInputChanged}
-            />
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              fullWidth
-              size="large"
-              style={{ marginTop: '30px' }}
-              disabled={!isValidFormInput() && isLoading}
-            >
-              Sign up
-            </Button>
-          </form>
+              <TextField
+                type={isShowingPassword ? 'text' : 'password'}
+                label="Password"
+                name="password"
+                autoComplete="new-password"
+                variant="outlined"
+                value={signUpFormInputData.password}
+                error={errors.password.length !== 0}
+                helperText={errors.password.length > 0 && errors.password[0]}
+                disabled={isLoading}
+                fullWidth
+                required
+                style={{ marginBottom: '10px' }}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={() => {
+                          setIsShowingPassword(!isShowingPassword);
+                        }}
+                        onMouseDown={(e: React.MouseEvent) => {
+                          e.preventDefault();
+                        }}
+                      >
+                        {isShowingPassword ? (
+                          <VisibilityIcon />
+                        ) : (
+                          <VisibilityOffIcon />
+                        )}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+                onChange={onFormInputChanged}
+              />
+              <TextField
+                type={isShowingPassword ? 'text' : 'password'}
+                label="Confirm Password"
+                name="passwordConfirmation"
+                autoComplete="new-password"
+                variant="outlined"
+                fullWidth
+                required
+                value={signUpFormInputData.passwordConfirmation}
+                error={errors.passwordConfirmation.length !== 0}
+                helperText={
+                  errors.passwordConfirmation.length > 0 &&
+                  errors.passwordConfirmation[0]
+                }
+                disabled={isLoading}
+                style={{ marginBottom: '10px' }}
+                onChange={onFormInputChanged}
+              />
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                fullWidth
+                size="large"
+                style={{ marginTop: '30px', marginBottom: 20 }}
+                disabled={!isValidFormInput() && isLoading}
+              >
+                Sign up
+              </Button>
+              <Grid container justify="flex-end">
+                <Typography>
+                  <Link
+                    style={{ marginRight: 10 }}
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setIsLoggingIn(true);
+                    }}
+                  >
+                    Already have an account?
+                  </Link>
+                </Typography>
+              </Grid>
+            </form>
+          )}
         </Grid>
         <Grid item className={classes.oauth__form}>
           Oauth form
