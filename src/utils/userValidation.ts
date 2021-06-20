@@ -3,14 +3,15 @@ const MAX_USERNAME_LENGTH = 16;
 
 export const validateUsername = (
   username: string,
-  { required = false } = {}
+  required: boolean = true
 ): [boolean, string[]] => {
   let isValid = true;
-  const messages = [];
+  const messages: string[] = [];
 
   if (required && username.length === 0) {
     isValid = false;
     messages.push('Username is required.');
+    return [isValid, messages];
   }
 
   if (username.includes(' ')) {
@@ -41,14 +42,15 @@ export const validateUsername = (
 
 export const validateEmail = (
   email: string,
-  { required = false } = {}
+  required: boolean = true
 ): [boolean, string[]] => {
   let isValid = true;
-  const messages = [];
+  const messages: string[] = [];
 
   if (required && email.length === 0) {
     isValid = false;
     messages.push('Email is required.');
+    return [isValid, messages];
   }
 
   const regex =
@@ -65,14 +67,15 @@ const MIN_PASSWORD_LENGTH = 8;
 const MAX_PASSWORD_LENGTH = 20;
 export const validatePassword = (
   password: string,
-  { required = false } = {}
+  required: boolean = true
 ): [boolean, string[]] => {
   let isValid = true;
-  const messages = [];
+  const messages: string[] = [];
 
   if (required && password.length === 0) {
     isValid = true;
     messages.push('Password is required.');
+    return [isValid, messages];
   }
 
   if (
@@ -112,18 +115,36 @@ export const validatePassword = (
 export const validatePasswordConfirmation = (
   passwordConfirmation: string,
   password: string,
-  { required = false } = {}
+  required = true
 ): [boolean, string[]] => {
   let isValid = true;
   const messages = [];
+
   if (required && passwordConfirmation.length === 0) {
     isValid = false;
     messages.push('Password confirmation is required.');
+    return [isValid, messages];
   }
 
   if (passwordConfirmation !== password) {
     isValid = false;
     messages.push('Password confirmation does not match.');
+  }
+
+  return [isValid, messages];
+};
+
+export const validatePhoneNumber = (
+  phoneNumber: string,
+  required = true
+): [boolean, string[]] => {
+  let isValid = true;
+  const messages: string[] = [];
+
+  if (required && phoneNumber.length === 0) {
+    isValid = false;
+    messages.push('Phone number is required.');
+    return [isValid, messages];
   }
 
   return [isValid, messages];

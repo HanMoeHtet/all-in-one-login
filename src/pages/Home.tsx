@@ -1,25 +1,22 @@
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../store';
-import { logout } from '../store/auth/authActions';
+import Box from '@material-ui/core/Box';
+import { Typography } from '@material-ui/core';
 
 const Home: React.FC = () => {
   const user = useSelector((state: RootState) => state.authStore.user);
-  const dispatch = useDispatch<AppDispatch>();
 
-  if (!user) return null;
-
-  const onLogOutBtnClicked = () => {
-    dispatch(logout());
-  };
+  if (!user) {
+    return null;
+  }
 
   return (
-    <div>
-      {user.username}{' '}
-      <button type="button" onClick={onLogOutBtnClicked}>
-        Log out
-      </button>
-    </div>
+    <Box>
+      <Box style={{ marginTop: 30 }} display="flex" justifyContent="center">
+        <Typography variant="h4">Welcome, {user.username}</Typography>
+      </Box>
+    </Box>
   );
 };
 

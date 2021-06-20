@@ -6,9 +6,9 @@ const api = axios.create({
   baseURL: apiUrl,
 });
 
-export const configureAuthHeader = (token: string) => {
+export const configureAuthHeader = (token: string | null) => {
   api.defaults.headers = {
-    Authorization: `Bearer ${token}`,
+    Authorization: token ? `Bearer ${token}` : '',
   };
 };
 

@@ -1,7 +1,8 @@
+import { AxiosResponse } from 'axios';
+
 import {
   AuthAction,
   AuthActionType,
-  AuthErrors,
   LogInFormInputData,
   SignUpFormInputData,
   User,
@@ -9,11 +10,7 @@ import {
 import { AppThunk } from '..';
 import api, { configureAuthHeader } from '../../services/api';
 import { getToken, removeToken, setToken } from '../../services/jwt';
-import { AxiosResponse } from 'axios';
-import {
-  setVerification,
-  setVerificationUserId,
-} from '../verification/verificationActions';
+import { setVerification } from '../verification/verificationActions';
 
 export const onLoadingStarted = (): AuthAction => {
   return {
@@ -31,70 +28,115 @@ export const onLoadingEnded = (): AuthAction => {
 
 export const signUpWithEmail =
   (formInputData: SignUpFormInputData): AppThunk<Promise<void>> =>
-  async (dispatch) => {
-    dispatch(onLoadingStarted());
+  (dispatch) =>
+    new Promise(async (resolve, reject) => {
+      dispatch(onLoadingStarted());
 
-    let response;
-    try {
-      response = await api.post('/signUpWithEmail', formInputData);
-      const { status, data } = response;
-      if (status === 200) {
-        const { email } = data.data;
-        dispatch(setVerification({ email }));
+      let response;
+      try {
+        response = await api.post('/signUpWithEmail', formInputData);
+        const { status, data } = response;
+        if (status === 200) {
+          const { userId, email } = data.data;
+          dispatch(setVerification({ userId, email }));
+        }
+        return resolve();
+      } catch (err) {
+        const { status, data } = err.response as AxiosResponse;
+        if (status === 400) {
+          const errors = data.errors;
+          return reject({ status, errors });
+        }
+        if (status === 500) {
+          return reject({ status });
+        }
+      } finally {
+        dispatch(onLoadingEnded());
       }
-    } catch (err) {
-      const { status, data } = err.response as AxiosResponse;
-      if (status === 400) {
-        const errors = data.errors;
-        dispatch(setErrors(errors));
+    });
+
+export const signUpWithPhoneNumber =
+  (formInputData: SignUpFormInputData): AppThunk<Promise<void>> =>
+  (dispatch) =>
+    new Promise(async (resolve, reject) => {
+      dispatch(onLoadingStarted());
+
+      let response;
+      try {
+        response = await api.post('/signUpWithPhoneNumber', formInputData);
+        const { status, data } = response;
+        if (status === 200) {
+          const { phoneNumber, userId } = data.data;
+          dispatch(setVerification({ userId, phoneNumber }));
+        }
+        return resolve();
+      } catch (err) {
+        const { status, data } = err.response as AxiosResponse;
+        if (status === 400) {
+          const errors = data.errors;
+          return reject({ status, errors });
+        }
+        if (status === 500) {
+          return reject({ status });
+        }
+      } finally {
+        dispatch(onLoadingEnded());
       }
-    } finally {
-      dispatch(onLoadingEnded());
-    }
-  };
+    });
 
 export const verifyEmail =
   (token: string): AppThunk<Promise<void>> =>
-  (dispatch, getState) => {
+  (dispatch) => {
     return new Promise(async (resolve, reject) => {
       let response;
+      dispatch(onLoadingStarted());
       try {
-        const userId = getState().verificationStore.userId;
-        response = await api.post('/verifyEmail', { token, userId });
-        const { user, token: jwtToken } = response.data.data;
-        console.log('hello from auth succeeded');
-        dispatch(onAuthSucceeded({ user, token: jwtToken }));
-        resolve();
+        response = await api.post('/verifyEmail', { token });
+        const { status, data } = response;
+        if (status === 200) {
+          const { user, token: jwtToken } = data.data;
+          dispatch(onAuthSucceeded({ user, token: jwtToken }));
+        }
+        return resolve();
       } catch (err) {
         console.log(err);
-        reject();
+        const response = err.response as AxiosResponse;
+        const { status, data } = response;
+        if (status === 400 || status === 410) {
+          return reject({ status, errors: data.errors });
+        }
+      } finally {
+        dispatch(onLoadingEnded());
       }
     });
   };
 
-export const signUpWithPhoneNumber =
-  (formInputData: SignUpFormInputData): AppThunk<Promise<void>> =>
-  async (dispatch) => {
-    dispatch(onLoadingStarted());
+export const sendNewEmail =
+  (): AppThunk<Promise<void>> => (dispatch, getState) => {
+    return new Promise(async (resolve, reject) => {
+      const userId = getState().verificationStore.userId;
+      if (!userId) return reject();
+      try {
+        await api.post('/sendNewEmail', { userId });
+        return resolve();
+      } catch (err) {
+        return reject();
+      }
+    });
+  };
 
-    let response;
-    try {
-      response = await api.post('/signUpWithPhoneNumber', formInputData);
-      const { status, data } = response;
-      if (status === 200) {
-        const { phoneNumber, userId } = data.data;
-        dispatch(setVerificationUserId(userId));
-        dispatch(setVerification({ phoneNumber }));
+export const sendNewOTP =
+  (): AppThunk<Promise<void>> => (dispatch, getState) => {
+    return new Promise(async (resolve, reject) => {
+      const userId = getState().verificationStore.userId;
+      if (!userId) return reject();
+      try {
+        await api.post('/sendNewOTP', { userId });
+        return resolve();
+      } catch (err) {
+        return reject();
       }
-    } catch (err) {
-      const { status, data } = err.response as AxiosResponse;
-      if (status === 400) {
-        const errors = data.errors;
-        dispatch(setErrors(errors));
-      }
-    } finally {
-      dispatch(onLoadingEnded());
-    }
+    });
   };
 
 export const verifyPhoneNumber =
@@ -105,12 +147,19 @@ export const verifyPhoneNumber =
       try {
         const userId = getState().verificationStore.userId;
         response = await api.post('/verifyPhoneNumber', { otp, userId });
-        const { user, token } = response.data.data;
-        dispatch(onAuthSucceeded({ user, token }));
-        resolve();
+        const { status, data } = response;
+        if (status === 200) {
+          const { user, token } = data.data;
+          dispatch(onAuthSucceeded({ user, token }));
+        }
+        return resolve();
       } catch (err) {
         console.log(err);
-        reject();
+        const response = err.response as AxiosResponse;
+        const { status, data } = response;
+        if (status === 400 || status === 410) {
+          return reject({ status, errors: data.errors });
+        }
       }
     });
 
@@ -121,29 +170,42 @@ export const signInWithOAuth =
       dispatch(onLoadingStarted());
       try {
         const response = await api.post('/signInWithOAuth', { oAuthProvider });
-        const { oAuthConsentUrl } = response.data.data;
-        resolve(oAuthConsentUrl);
+        const { status, data } = response;
+        if (status === 200) {
+          const { oAuthConsentUrl } = data.data;
+          return resolve(oAuthConsentUrl);
+        }
       } catch (err) {
         console.log(err);
-        reject();
+        const response = err.response as AxiosResponse;
+        const { status, data } = response;
+        if (status === 400) return reject({ status, errors: data.errors });
       } finally {
         dispatch(onLoadingEnded());
       }
     });
   };
 
-export const redirectOauth =
+export const redirectOAuth =
   (url: string): AppThunk<Promise<void>> =>
   (dispatch) =>
     new Promise(async (resolve, reject) => {
       try {
         const response = await api.get(url);
-        const { user, token } = response.data.data;
-        dispatch(onAuthSucceeded({ user, token }));
-        resolve();
+        const { status, data } = response;
+        if (status === 200) {
+          const { user, token } = data.data;
+          dispatch(onAuthSucceeded({ user, token }));
+          return resolve();
+        }
       } catch (err) {
         console.log(err);
-        reject();
+        const response = err.response as AxiosResponse;
+        const { status, data } = response;
+        if (status === 401 || status === 403)
+          return reject({ status, messages: data.messages });
+        if (status === 400) return reject({ status, errors: data.errors });
+        if (status === 500) return reject({ status });
       }
     });
 
@@ -155,12 +217,22 @@ export const logIn =
       let response;
       try {
         response = await api.post('/logIn', logInFormInputData);
-        const { user, token } = response.data.data;
-        dispatch(onAuthSucceeded({ user, token }));
-        resolve();
+        const { status, data } = response;
+        if (status === 200) {
+          const { user, token } = data.data;
+          dispatch(onAuthSucceeded({ user, token }));
+        }
+        return resolve();
       } catch (err) {
         console.log(err);
-        reject();
+        const response = err.response as AxiosResponse;
+        const { status, data } = response;
+        if (status === 404 || status === 401) {
+          return reject({ status, errors: data.errors });
+        }
+        if (status === 500) {
+          return reject({ status });
+        }
       } finally {
         dispatch(onLoadingEnded());
       }
@@ -174,6 +246,7 @@ export const onAuthSucceeded =
     configureAuthHeader(token);
     dispatch(setIsAuthenticated(true));
     dispatch(setUser(user));
+    dispatch(setVerification({ userId: null }));
   };
 
 export const setIsAuthenticated = (isAuthenticated: boolean): AuthAction => {
@@ -190,40 +263,35 @@ export const setUser = (user: User | null): AuthAction => {
   };
 };
 
-export const setErrors = (errors: AuthErrors): AuthAction => {
-  return {
-    type: AuthActionType.SET_ERRORS,
-    payload: errors,
-  };
-};
-
-export const setError =
-  (error: Partial<AuthErrors>): AppThunk<void> =>
-  async (dispatch, getState) => {
-    const errors = getState().authStore.errors;
-    dispatch(setErrors({ ...errors, ...error }));
-  };
-
-export const checkAuth = (): AppThunk => async (dispatch) => {
-  dispatch(onLoadingStarted());
+export const checkAuth = (): AppThunk<Promise<void>> => async (dispatch) => {
   const token = getToken();
   if (token) {
+    dispatch(onLoadingStarted());
     let response;
     try {
       response = await api.post('/signInWithToken', { token });
-      const { user } = response.data.data;
-      dispatch(setUser(user));
-      dispatch(setIsAuthenticated(true));
+      const { status, data } = response;
+      if (status === 200) {
+        const { user } = data.data;
+        dispatch(setUser(user));
+        dispatch(setIsAuthenticated(true));
+      }
     } catch (err) {
       console.log(err);
+      const response = err.response as AxiosResponse;
+      const { status } = response;
+      if (status === 400) {
+        dispatch(logOut());
+      }
+    } finally {
+      dispatch(onLoadingEnded());
     }
   }
-  dispatch(onLoadingEnded());
 };
 
-export const logout = (): AppThunk => (dispatch) => {
+export const logOut = (): AppThunk => (dispatch) => {
   removeToken();
-  configureAuthHeader('');
+  configureAuthHeader(null);
   dispatch(setIsAuthenticated(false));
   dispatch(setUser(null));
 };

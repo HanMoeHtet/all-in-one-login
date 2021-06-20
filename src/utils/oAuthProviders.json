@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Google",
+    "uri": "/signInWithGoogle",
+    "backgroundColor": "white",
+    "color": "#000000ba"
+  },
+  {
+    "name": "Facebook",
+    "uri": "/signInWithFacebook",
+    "backgroundColor": "#436a9c",
+    "color": "white"
+  },
+  {
+    "name": "Github",
+    "uri": "/signInWithGithub",
+    "backgroundColor": "#24292e",
+    "color": "white"
+  }
+]

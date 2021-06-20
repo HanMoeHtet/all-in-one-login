@@ -1,7 +1,7 @@
 import {
-  Verification,
   VerificationAction,
   VerificationActionType,
+  Verification,
 } from './types';
 
 export const setVerification = (
@@ -10,12 +10,5 @@ export const setVerification = (
   return {
     type: VerificationActionType.SET_VERIFICATION,
     payload: verification,
-  };
-};
-
-export const setVerificationUserId = (userId: string | null) => {
-  return {
-    type: VerificationActionType.SET_USER_ID,
-    payload: userId,
   };
 };

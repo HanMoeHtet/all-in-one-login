@@ -3,8 +3,7 @@ import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import { AppDispatch } from '../store';
-import { redirectOauth } from '../store/auth/authActions';
-import oAuthLinks from '../utils/oAuthLinks.json';
+import { redirectOAuth } from '../store/auth/authActions';
 
 const OAuthRedirect: React.FC = () => {
   const { pathname, search } = useLocation();
@@ -12,7 +11,7 @@ const OAuthRedirect: React.FC = () => {
 
   useEffect(() => {
     (async () => {
-      await dispatch(redirectOauth(pathname + search));
+      await dispatch(redirectOAuth(pathname + search));
       window.close();
     })();
   }, [pathname, search, dispatch]);

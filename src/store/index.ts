@@ -3,7 +3,6 @@ import {
   createStore,
   applyMiddleware,
   AnyAction,
-  compose,
 } from 'redux';
 import reduxThunk, { ThunkAction, ThunkDispatch } from 'redux-thunk';
 import authReducer from './auth/authReducer';

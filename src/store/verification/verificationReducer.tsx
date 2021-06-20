@@ -1,11 +1,10 @@
 import {
   VerificationAction,
-  VerificationState,
+  Verification as VerificationState,
   VerificationActionType,
 } from './types';
 
 const initialState: VerificationState = {
-  verification: {},
   userId: null,
 };
 
@@ -15,9 +14,7 @@ const verificationReducer = (
 ): VerificationState => {
   switch (action.type) {
     case VerificationActionType.SET_VERIFICATION:
-      return { ...state, verification: action.payload };
-    case VerificationActionType.SET_USER_ID:
-      return { ...state, userId: action.payload };
+      return action.payload;
     default:
       return state;
   }
