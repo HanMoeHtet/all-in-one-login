@@ -1,6 +1,6 @@
 import React from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { AppDispatch, RootState } from '../store';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
 import Box from '@material-ui/core/Box';
 import { Typography } from '@material-ui/core';
 

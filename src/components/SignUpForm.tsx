@@ -3,9 +3,6 @@ import {
   InputAdornment,
   IconButton,
   Button,
-  Grid,
-  Typography,
-  Link,
 } from '@material-ui/core';
 import {
   Phone as PhoneIcon,
