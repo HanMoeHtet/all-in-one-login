@@ -12,3 +12,13 @@ export const setVerification = (
     payload: verification,
   };
 };
+
+export const setLoading = (isLoading: boolean): VerificationAction => {
+  return {
+    type: VerificationActionType.SET_IS_LOADING,
+    payload: isLoading,
+  };
+};
+
+export const onVerificationStarted = () => setLoading(true);
+export const onVerificationEnded = () => setLoading(false);

@@ -10,7 +10,11 @@ import {
 import { AppThunk } from '..';
 import api, { configureAuthHeader } from '../../services/api';
 import { getToken, removeToken, setToken } from '../../services/jwt';
-import { setVerification } from '../verification/verificationActions';
+import {
+  onVerificationEnded,
+  onVerificationStarted,
+  setVerification,
+} from '../verification/verificationActions';
 
 export const onLoadingStarted = (): AuthAction => {
   return {
@@ -89,7 +93,7 @@ export const verifyEmail =
   (dispatch) => {
     return new Promise(async (resolve, reject) => {
       let response;
-      dispatch(onLoadingStarted());
+      dispatch(onVerificationStarted());
       try {
         response = await api.post('/verifyEmail', { token });
         const { status, data } = response;
@@ -106,7 +110,7 @@ export const verifyEmail =
           return reject({ status, errors: data.errors });
         }
       } finally {
-        dispatch(onLoadingEnded());
+        dispatch(onVerificationEnded());
       }
     });
   };
@@ -200,6 +204,7 @@ export const redirectOAuth =
         }
       } catch (err) {
         console.log(err);
+        if (!('response' in err)) return reject({ status: 500 });
         const response = err.response as AxiosResponse;
         const { status, data } = response;
         if (status === 401 || status === 403)

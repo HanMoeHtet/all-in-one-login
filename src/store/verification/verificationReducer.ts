@@ -15,6 +15,8 @@ const verificationReducer = (
   switch (action.type) {
     case VerificationActionType.SET_VERIFICATION:
       return action.payload;
+    case VerificationActionType.SET_IS_LOADING:
+      return { ...state, isLoading: action.payload };
     default:
       return state;
   }

@@ -39,7 +39,9 @@ const OAuthForm: React.FC = () => {
 
   const onOAuthSignInBtnClicked = async (oAuthProvider: string) => {
     try {
-      const oAuthConsentUrl = await dispatch(signInWithOAuth(oAuthProvider));
+      const oAuthConsentUrl = await dispatch(
+        signInWithOAuth(oAuthProvider.toUpperCase())
+      );
       const popUpWindow = window.open(oAuthConsentUrl, '_blank', 'location=0');
       const interval = setInterval(() => {
         if (popUpWindow && popUpWindow.closed) {

@@ -21,14 +21,14 @@ const AppBar = React.memo(() => {
 
   return (
     <MuiAppBar position="sticky" elevation={2}>
-      <Toolbar>
-        <Box display="flex" flexGrow="1" justifyContent="center">
+      <Toolbar style={{ position: 'relative' }}>
+        <Box display="flex" width="100%" justifyContent="center">
           <Typography color="inherit" variant="h4">
             All in One Login
           </Typography>
         </Box>
         {isAuthenticated && (
-          <Box display="flex">
+          <Box display="flex" position="absolute" right="24px">
             <Button
               onClick={onLogOutBtnClicked}
               variant="contained"

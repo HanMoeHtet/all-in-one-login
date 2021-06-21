@@ -19,6 +19,9 @@ function App() {
   const dispatch = useDispatch<AppDispatch>();
 
   const [isLoading, setIsLoading] = useState(true);
+  const isVerifying = useSelector(
+    (state: RootState) => state.verificationStore.isLoading
+  );
 
   useEffect(() => {
     (async () => {
@@ -31,9 +34,7 @@ function App() {
     (state: RootState) => state.authStore.isAuthenticated
   );
 
-  console.log('isAuth', isAuthenticated, 'isLoading', isLoading);
-
-  if (isLoading) return null;
+  if (isLoading || isVerifying) return null;
 
   return (
     <BrowserRouter>
